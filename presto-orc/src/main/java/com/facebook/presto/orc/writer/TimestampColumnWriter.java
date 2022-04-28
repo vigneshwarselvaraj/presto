@@ -62,7 +62,7 @@ public class TimestampColumnWriter
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(TimestampColumnWriter.class).instanceSize();
     private static final int MILLIS_PER_SECOND = 1000;
-    private static final int MICROS_PER_SECOND = 1_000_000;
+    private static final int MICROS_PER_SECOND = 1000_000;
     private static final int MILLIS_TO_NANOS_TRAILING_ZEROS = 5;
     private static final int MICROS_TO_NANOS_TRAILING_ZEROS = 2;
 
@@ -108,7 +108,7 @@ public class TimestampColumnWriter
             this.trailingZeros = MICROS_TO_NANOS_TRAILING_ZEROS;
         }
         else {
-            throw new UnsupportedOperationException("Unsupported Timestamp Type: " + type);
+            throw new UnsupportedOperationException("Unsupported Type: " + type);
         }
         if (orcEncoding == DWRF) {
             this.columnEncoding = new ColumnEncoding(DIRECT, 0);
