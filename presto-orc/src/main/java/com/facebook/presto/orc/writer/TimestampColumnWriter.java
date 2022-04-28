@@ -45,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP;
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP_MICROSECONDS;
 import static com.facebook.presto.orc.OrcEncoding.DWRF;
 import static com.facebook.presto.orc.metadata.ColumnEncoding.ColumnEncodingKind.DIRECT;
 import static com.facebook.presto.orc.metadata.ColumnEncoding.ColumnEncodingKind.DIRECT_V2;
@@ -60,7 +62,10 @@ public class TimestampColumnWriter
 {
     private static final int INSTANCE_SIZE = ClassLayout.parseClass(TimestampColumnWriter.class).instanceSize();
     private static final int MILLIS_PER_SECOND = 1000;
+    private static final int MICROS_PER_SECOND = 1_000_000;
     private static final int MILLIS_TO_NANOS_TRAILING_ZEROS = 5;
+    private static final int MICROS_TO_NANOS_TRAILING_ZEROS = 2;
+
     // Timestamp is encoded as Seconds (Long) and Nanos (Integer)
     private static final long TIMESTAMP_RAW_SIZE = Long.BYTES + Integer.BYTES;
 
@@ -72,6 +77,9 @@ public class TimestampColumnWriter
     private final LongOutputStream nanosStream;
     private final PresentOutputStream presentStream;
     private final CompressedMetadataWriter metadataWriter;
+
+    private final int millisOrMicrosPerSecond;
+    private final int trailingZeros;
 
     private final List<ColumnStatistics> rowGroupColumnStatistics = new ArrayList<>();
     private long columnStatisticsRetainedSizeInBytes;
@@ -91,6 +99,17 @@ public class TimestampColumnWriter
         this.column = column;
         this.type = requireNonNull(type, "type is null");
         this.compressed = columnWriterOptions.getCompressionKind() != NONE;
+        if (type == TIMESTAMP) {
+            this.millisOrMicrosPerSecond = MILLIS_PER_SECOND;
+            this.trailingZeros = MILLIS_TO_NANOS_TRAILING_ZEROS;
+        }
+        else if (type == TIMESTAMP_MICROSECONDS) {
+            this.millisOrMicrosPerSecond = MICROS_PER_SECOND;
+            this.trailingZeros = MICROS_TO_NANOS_TRAILING_ZEROS;
+        }
+        else {
+            throw new UnsupportedOperationException("Unsupported Timestamp Type: " + type);
+        }
         if (orcEncoding == DWRF) {
             this.columnEncoding = new ColumnEncoding(DIRECT, 0);
             this.secondsStream = new LongOutputStreamV1(columnWriterOptions, dwrfEncryptor, true, DATA);
@@ -139,8 +158,8 @@ public class TimestampColumnWriter
 
                 // It is a flaw in ORC encoding that uses normal integer division to compute seconds,
                 // and floor modulus to compute nano seconds.
-                long seconds = (value / MILLIS_PER_SECOND) - baseTimestampInSeconds;
-                long millis = Math.floorMod(value, MILLIS_PER_SECOND);
+                long seconds = (value / millisOrMicrosPerSecond) - baseTimestampInSeconds;
+                long micros = Math.floorMod(value, millisOrMicrosPerSecond);
                 // The "sub-second" value (i.e., the nanos value) typically has a large number of trailing
                 // zero, because many systems, like Presto, only record millisecond or microsecond precision
                 // timestamps. To optimize storage, if the value has more than two trailing zeros, the trailing
@@ -160,7 +179,8 @@ public class TimestampColumnWriter
                 // In Presto, we only have millisecond precision.
                 // Therefore, we always use the encoding for 6 trailing zeros (except when input is zero).
                 // For simplicity, we don't dynamically use 6, 7, 8 depending on the circumstance.
-                long encodedNanos = millis == 0 ? 0 : (millis << 3) | MILLIS_TO_NANOS_TRAILING_ZEROS;
+                long encodedNanos = micros == 0 ? 0 : (micros << 3) | trailingZeros;
+                // long encodedNanos = formatNanos((int) millis);
 
                 secondsStream.writeLong(seconds);
                 nanosStream.writeLong(encodedNanos);
