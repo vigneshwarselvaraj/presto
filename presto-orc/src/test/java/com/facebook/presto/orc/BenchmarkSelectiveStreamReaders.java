@@ -79,6 +79,7 @@ import static com.facebook.presto.common.type.IntegerType.INTEGER;
 import static com.facebook.presto.common.type.RealType.REAL;
 import static com.facebook.presto.common.type.SmallintType.SMALLINT;
 import static com.facebook.presto.common.type.TimestampType.TIMESTAMP;
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP_MICROSECONDS;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.facebook.presto.metadata.FunctionAndTypeManager.createTestFunctionAndTypeManager;
 import static com.facebook.presto.orc.DwrfEncryptionProvider.NO_ENCRYPTION;
@@ -95,6 +96,7 @@ import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.joda.time.DateTimeZone.UTC;
@@ -425,6 +427,11 @@ public class BenchmarkSelectiveStreamReaders
                 // We use int because longs will be converted to int when being written.
                 long value = random.nextInt();
                 return new SqlTimestamp(value, TimeZoneKey.UTC_KEY, MILLISECONDS);
+            }
+
+            if (type == TIMESTAMP_MICROSECONDS) {
+                long value = random.nextInt();
+                return new SqlTimestamp(value, MICROSECONDS);
             }
 
             if (type == REAL) {

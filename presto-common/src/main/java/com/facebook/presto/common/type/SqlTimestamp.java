@@ -29,7 +29,7 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-public final class SqlTimestamp
+    public final class SqlTimestamp
 {
     private static final long MICROS_PER_SECOND = 1_000_000;
     private static final long NANOS_PER_MICROS = 1_000;
@@ -64,6 +64,12 @@ public final class SqlTimestamp
     {
         checkState(!isLegacyTimestamp(), "getMillis() can be called in new timestamp semantics only");
         return precision.toMillis(value);
+    }
+
+    public long getMicros()
+    {
+        checkState(!isLegacyTimestamp(), "getMicros() can be called in new timestamp semantics only");
+        return precision.toMicros(value);
     }
 
     @Deprecated

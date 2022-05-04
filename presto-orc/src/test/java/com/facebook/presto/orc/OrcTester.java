@@ -146,6 +146,7 @@ import static com.facebook.presto.common.type.IntegerType.INTEGER;
 import static com.facebook.presto.common.type.RealType.REAL;
 import static com.facebook.presto.common.type.SmallintType.SMALLINT;
 import static com.facebook.presto.common.type.TimestampType.TIMESTAMP;
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP_MICROSECONDS;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.facebook.presto.common.type.VarbinaryType.VARBINARY;
 import static com.facebook.presto.common.type.VarcharType.VARCHAR;
@@ -180,6 +181,7 @@ import static io.airlift.units.DataSize.succinctBytes;
 import static java.lang.Math.toIntExact;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_ALL_COLUMNS;
@@ -1188,6 +1190,10 @@ public class OrcTester
             return filter.testLong(((SqlTimestamp) value).getMillisUtc());
         }
 
+        if (type == TIMESTAMP_MICROSECONDS) {
+            return filter.testLong(((SqlTimestamp) value).getMicros());
+        }
+
         if (type instanceof DecimalType) {
             DecimalType decimalType = (DecimalType) type;
             BigDecimal bigDecimal = ((SqlDecimal) value).toBigDecimal();
@@ -1776,6 +1782,10 @@ public class OrcTester
                 long millis = ((SqlTimestamp) value).getMillisUtc();
                 type.writeLong(blockBuilder, millis);
             }
+            else if (TIMESTAMP_MICROSECONDS.equals(type)) {
+                long micros = new SqlTimestamp((long) value, MICROSECONDS).getMicros();
+                type.writeLong(blockBuilder, micros);
+            }
             else {
                 String baseType = type.getTypeSignature().getBase();
                 if (StandardTypes.ARRAY.equals(baseType)) {
@@ -2118,7 +2128,7 @@ public class OrcTester
         if (type.equals(DATE)) {
             return javaDateObjectInspector;
         }
-        if (type.equals(TIMESTAMP)) {
+        if (type.equals(TIMESTAMP) || type.equals(TIMESTAMP_MICROSECONDS)) {
             return javaTimestampObjectInspector;
         }
         if (type instanceof DecimalType) {
@@ -2195,6 +2205,10 @@ public class OrcTester
         else if (type.equals(TIMESTAMP)) {
             long millisUtc = (int) ((SqlTimestamp) value).getMillisUtc();
             return new Timestamp(millisUtc);
+        }
+        else if (type.equals(TIMESTAMP_MICROSECONDS)) {
+            long micros = ((SqlTimestamp) value).getMicros();
+            return new Timestamp(micros);
         }
         else if (type instanceof DecimalType) {
             return HiveDecimal.create(((SqlDecimal) value).toBigDecimal());

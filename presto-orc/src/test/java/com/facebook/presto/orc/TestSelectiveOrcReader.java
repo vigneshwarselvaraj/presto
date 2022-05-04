@@ -59,6 +59,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -75,6 +76,7 @@ import static com.facebook.presto.common.type.IntegerType.INTEGER;
 import static com.facebook.presto.common.type.RealType.REAL;
 import static com.facebook.presto.common.type.SmallintType.SMALLINT;
 import static com.facebook.presto.common.type.TimestampType.TIMESTAMP;
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP_MICROSECONDS;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.facebook.presto.common.type.VarbinaryType.VARBINARY;
 import static com.facebook.presto.common.type.VarcharType.VARCHAR;
@@ -604,7 +606,7 @@ public class TestSelectiveOrcReader
     public void testArraysOfNulls()
             throws Exception
     {
-        for (Type type : ImmutableList.of(BOOLEAN, BIGINT, INTEGER, SMALLINT, TINYINT, DOUBLE, REAL, TIMESTAMP, DECIMAL_TYPE_PRECISION_19, DECIMAL_TYPE_PRECISION_4, VARCHAR, CHAR_10, VARBINARY, arrayType(INTEGER))) {
+        for (Type type : ImmutableList.of(BOOLEAN, BIGINT, INTEGER, SMALLINT, TINYINT, DOUBLE, REAL, TIMESTAMP, TIMESTAMP_MICROSECONDS, DECIMAL_TYPE_PRECISION_19, DECIMAL_TYPE_PRECISION_4, VARCHAR, CHAR_10, VARBINARY, arrayType(INTEGER))) {
             tester.testRoundTrip(arrayType(type),
                     nCopies(NUM_ROWS, nCopies(5, null)),
                     ImmutableList.of(
@@ -1205,6 +1207,10 @@ public class TestSelectiveOrcReader
                 .map(timestamp -> sqlTimestampOf(timestamp & Integer.MAX_VALUE, SESSION))
                 .collect(toList());
 
+        List<SqlTimestamp> timestamps_micros = longValues.stream()
+                .map(timestamp -> sqlTimestampOf(timestamp & Integer.MAX_VALUE, SESSION, TimeUnit.MICROSECONDS))
+                .collect(toList());
+
         tester.testRoundTrip(BIGINT, longValues, toSubfieldFilters(filter));
 
         tester.testRoundTrip(INTEGER, intValues, toSubfieldFilters(filter));
@@ -1215,6 +1221,8 @@ public class TestSelectiveOrcReader
 
         tester.testRoundTrip(TIMESTAMP, timestamps, toSubfieldFilters(filter));
 
+        tester.testRoundTrip(TIMESTAMP_MICROSECONDS, timestamps_micros, toSubfieldFilters(filter));
+
         List<Integer> reversedIntValues = new ArrayList<>(intValues);
         Collections.reverse(reversedIntValues);
 
@@ -1224,7 +1232,7 @@ public class TestSelectiveOrcReader
         List<SqlTimestamp> reversedTimestampValues = new ArrayList<>(timestamps);
         Collections.reverse(reversedTimestampValues);
 
-        tester.testRoundTripTypes(ImmutableList.of(BIGINT, INTEGER, SMALLINT, DATE, TIMESTAMP),
+        tester.testRoundTripTypes(ImmutableList.of(BIGINT, INTEGER, SMALLINT, DATE, TIMESTAMP, TIMESTAMP_MICROSECONDS),
                 ImmutableList.of(
                         longValues,
                         reversedIntValues,
