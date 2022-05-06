@@ -11,29 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.facebook.presto.orc.stream;
+package com.facebook.presto.plugin.jdbc;
 
-import com.facebook.presto.orc.checkpoint.StreamCheckpoint;
+import com.facebook.presto.spi.session.PropertyMetadata;
 
 import java.util.List;
 
-public interface ValueOutputStream<C extends StreamCheckpoint>
+public interface JdbcSessionPropertiesProvider
 {
-    void recordCheckpoint();
-
-    void close();
-
-    List<C> getCheckpoints();
-
-    StreamDataOutput getStreamDataOutput(int column, int sequence);
-
-    /**
-     * This method returns the size of the flushed data plus any unflushed data.
-     * If the output is compressed, flush data size is the size after compression.
-     */
-    long getBufferedBytes();
-
-    long getRetainedBytes();
-
-    void reset();
+    List<PropertyMetadata<?>> getSessionProperties();
 }
