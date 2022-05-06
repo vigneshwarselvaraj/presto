@@ -48,6 +48,7 @@ import static com.facebook.presto.common.type.StandardTypes.ARRAY;
 import static com.facebook.presto.common.type.StandardTypes.MAP;
 import static com.facebook.presto.common.type.StandardTypes.ROW;
 import static com.facebook.presto.common.type.TimestampType.TIMESTAMP;
+import static com.facebook.presto.common.type.TimestampType.TIMESTAMP_MICROSECONDS;
 import static com.facebook.presto.common.type.TinyintType.TINYINT;
 import static com.facebook.presto.orc.OrcTester.Format.DWRF;
 import static com.google.common.base.Predicates.equalTo;
@@ -90,6 +91,14 @@ public final class TestingOrcPredicate
                     columnIndex,
                     expectedValues.stream()
                             .map(value -> value == null ? null : ((Number) value).longValue())
+                            .collect(toList()),
+                    false);
+        }
+        if (TIMESTAMP_MICROSECONDS.equals(type)) {
+            return new LongOrcPredicate(false,
+                    columnIndex,
+                    expectedValues.stream()
+                            .map(value -> value == null ? null : ((SqlTimestamp) value).getMicrosUtc())
                             .collect(toList()),
                     false);
         }

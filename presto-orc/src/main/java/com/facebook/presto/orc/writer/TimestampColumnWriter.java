@@ -80,6 +80,7 @@ public class TimestampColumnWriter
 
     private final int millisOrMicrosPerSecond;
     private final int trailingZeros;
+    private int counter;
 
     private final List<ColumnStatistics> rowGroupColumnStatistics = new ArrayList<>();
     private long columnStatisticsRetainedSizeInBytes;
@@ -96,6 +97,7 @@ public class TimestampColumnWriter
         requireNonNull(columnWriterOptions, "compression is null");
         requireNonNull(dwrfEncryptor, "dwrfEncryptor is null");
         requireNonNull(metadataWriter, "metadataWriter is null");
+        this.counter = 0;
         this.column = column;
         this.type = requireNonNull(type, "type is null");
         this.compressed = columnWriterOptions.getCompressionKind() != NONE;
@@ -182,6 +184,9 @@ public class TimestampColumnWriter
                 long encodedNanos = micros == 0 ? 0 : (micros << 3) | trailingZeros;
                 // long encodedNanos = formatNanos((int) millis);
 
+                if (counter++ < 50) {
+                    System.out.println("Write: Seconds is " + seconds + ", Nanos is " + encodedNanos);
+                }
                 secondsStream.writeLong(seconds);
                 nanosStream.writeLong(encodedNanos);
                 blockNonNullValueCount++;
